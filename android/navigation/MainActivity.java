@@ -12,7 +12,10 @@ import org.eclipse.paho.client.mqttv3.IMqttToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
+
+import java.io.UnsupportedEncodingException;
 
 public class MainActivity extends AppCompatActivity implements MqttCallback {
     MqttAndroidClient client;
@@ -39,6 +42,17 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
                 public void onSuccess(IMqttToken asyncActionToken) {
                     // We are connected
                     Log.d(a, "onSuccess");
+                    String topic1 = "test";
+                    String payload = "the payload";
+                    byte[] encodedPayload = new byte[0];
+                    try {
+                        encodedPayload = payload.getBytes("UTF-8");
+                        MqttMessage message = new MqttMessage(encodedPayload);
+                        client.publish(topic1, message);
+                    } catch (UnsupportedEncodingException | MqttException e) {
+                        e.printStackTrace();
+                    }
+
                     Toast.makeText(getApplicationContext(), "onSuccess1", Toast.LENGTH_SHORT).show();
                     String topic = "foo/bar";
                     int qos = 1;
