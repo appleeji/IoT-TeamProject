@@ -1,0 +1,10 @@
+repositories {
+    maven {
+        url "https://repo.eclipse.org/content/repositories/paho-releases/"
+    }
+}
+dependencies {
+    compile('org.eclipse.paho:org.eclipse.paho.android.service:1.0.2') {
+            exclude module: 'support-v4'
+    }
+}
