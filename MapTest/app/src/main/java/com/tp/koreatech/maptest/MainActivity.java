@@ -62,15 +62,13 @@ public class MainActivity extends AppCompatActivity
         implements OnMapReadyCallback,
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener,
-        LocationListener, MqttCallback{
-
+        LocationListener{
 
     private GoogleApiClient mGoogleApiClient = null;
     private GoogleMap mGoogleMap = null;
     private Marker currentMarker = null;
     private Marker testMarker = null;
 
-    //디폴트 위치, Seoul
     private static final LatLng DEFAULT_LOCATION = new LatLng(37.56, 126.97);
     private static final String TAG = "googlemap";
     private static final int GPS_ENABLE_REQUEST_CODE = 2001;
@@ -90,78 +88,6 @@ public class MainActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        //----------------------------------------------------------------------------------------------------------------
-        /*client = new MqttAndroidClient(getApplicationContext(),
-                "tcp://192.168.0.41:1883", clientId);
-
-        try{
-            MqttConnectOptions options = new MqttConnectOptions();
-            options.setMqttVersion(MqttConnectOptions.MQTT_VERSION_3_1);
-            options.setUserName("USERNAME");
-            options.setPassword("PASSWORD".toCharArray());
-            client.setCallback(this);
-            IMqttToken token = client.connect(options);
-
-            token.setActionCallback(new IMqttActionListener() {
-                String a = "abc";
-                @Override
-                public void onSuccess(IMqttToken asyncActionToken) {
-                    // We are connected
-                    Log.d(a, "onSuccess");
-                    String topic1 = "foo/bar";
-                    String payload = "the payload";
-                    byte[] encodedPayload = new byte[0];
-                    try {
-                        encodedPayload = payload.getBytes("UTF-8");
-                        MqttMessage message = new MqttMessage(encodedPayload);
-                        client.publish(topic1, message);
-                    } catch (UnsupportedEncodingException | MqttException e) {
-                        e.printStackTrace();
-                    }
-
-                    Toast.makeText(getApplicationContext(), "onSuccess1", Toast.LENGTH_SHORT).show();
-                    String topic = "accident";
-                    int qos = 0;
-                    try {
-                        IMqttToken subToken = client.subscribe(topic, qos);
-                        subToken.setActionCallback(new IMqttActionListener() {
-                            @Override
-                            public void onSuccess(IMqttToken asyncActionToken) {
-                                // The message was published
-                                Toast.makeText(getApplicationContext(), "onSuccess2", Toast.LENGTH_SHORT).show();
-
-                            }
-
-                            @Override
-                            public void onFailure(IMqttToken asyncActionToken,
-                                                  Throwable exception) {
-                                // The subscription could not be performed, maybe the user was not
-                                // authorized to subscribe on the specified topic e.g. using wildcards
-                                Toast.makeText(getApplicationContext(), "onFailure2", Toast.LENGTH_SHORT).show();
-
-                            }
-                        });
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        Log.e("taga", e.toString());
-                        Toast.makeText(getApplicationContext(), "err", Toast.LENGTH_SHORT).show();
-                    }
-                }
-
-                @Override
-                public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
-                    // Something went wrong e.g. connection timeout or firewall problems
-                    Log.d(a, "onFailure");
-                    Toast.makeText(getApplicationContext(), "onFailure1", Toast.LENGTH_SHORT).show();
-                }
-            });
-        }catch(Exception e){
-            Log.e("MqttError", e.getMessage());
-            Toast.makeText(getApplicationContext(), "error", Toast.LENGTH_SHORT).show();
-        }*/
-
-        //----------------------------------------------------------------------------------------------------------------
-
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
                 WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_main);
@@ -178,9 +104,6 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onStart() {
         super.onStart();
-
-        //if (mGoogleApiClient != null)
-        // mGoogleApiClient.connect();
     }
 
     @Override
@@ -190,7 +113,6 @@ public class MainActivity extends AppCompatActivity
         if (mGoogleApiClient!=null)
             mGoogleApiClient.connect();
 
-        //앱 정보에서 퍼미션을 허가했는지를 다시 검사해봐야 한다.
         if (askPermissionOnceAgain) {
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -214,7 +136,6 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onPause() {
 
-        //위치 업데이트 중지
         if (mGoogleApiClient != null && mGoogleApiClient.isConnected()) {
 
             LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
@@ -250,16 +171,13 @@ public class MainActivity extends AppCompatActivity
 
         mGoogleMap = map;
 
-        //런타임 퍼미션 요청 대화상자나 GPS 활성 요청 대화상자 보이기전에
-        //지도의 초기위치를 서울로 이동
-        setCurrentLocation(null, "위치정보 가져올 수 없음", "위치 퍼미션과 GPS 활성 요부 확인하세요");
+        setCurrentLocation(null, "위치정보 가져올 수 없음", "GPS 권한과 GPS 활성 여부 확인하세요");
 
         mGoogleMap.getUiSettings().setCompassEnabled(true);
-        //mGoogleMap.setMapType(GoogleMap.MAP_TYPE_HYBRID);
         mGoogleMap.animateCamera(CameraUpdateFactory.zoomTo(17));
 
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) { //API 23 이상이면 런타임 퍼미션 처리 필요
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
 
             int hasFineLocationPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION);
 
@@ -292,18 +210,7 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onClick(View view) {
                 String ip;
-                /*LatLng newLocation = new LatLng(35.7, 125.5);
-                //LatLng newLocation = new LatLng(126.70, 37.12);
-                myI++;
-                MarkerOptions markerOptions = new MarkerOptions();
-                markerOptions.position(newLocation);
-                markerOptions.title("test" + myI);
-                markerOptions.snippet("test1-" + myI);
-                                    *//*
-                                    markerOptions.draggable(true);
-                                    markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));*//*
 
-                testMarker = mGoogleMap.addMarker(markerOptions);*/
                 if(etext.length() != 0){
                     ip = etext.getText().toString();
                     client = new MqttAndroidClient(getApplicationContext(),
@@ -334,20 +241,15 @@ public class MainActivity extends AppCompatActivity
                                         l[0] = Double.parseDouble(a[1]);
                                         l[1] = Double.parseDouble(a[2]);
 
-                                        /////
                                         try {
                                             LatLng newLocation = new LatLng(l[1], l[0]);
                                             Toast.makeText(getApplicationContext(), "message arrived(" + a[0] + "):" + newLocation.latitude + "," + newLocation.longitude, Toast.LENGTH_SHORT).show();
 
-                                            //LatLng newLocation = new LatLng(126.70, 37.12);
                                             myI++;
                                             MarkerOptions markerOptions = new MarkerOptions();
                                             markerOptions.position(newLocation);
                                             markerOptions.title("test" + myI);
                                             markerOptions.snippet("test1-" + myI);
-                                    /*
-                                    markerOptions.draggable(true);
-                                    markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));*/
 
                                             testMarker = mGoogleMap.addMarker(markerOptions);
                                             accidentList.put(a[0], testMarker);
@@ -387,8 +289,8 @@ public class MainActivity extends AppCompatActivity
                             public void onSuccess(IMqttToken asyncActionToken) {
                                 // We are connected
                                 Log.d(a, "onSuccess");
-                                String topic1 = "foo/bar";
-                                String payload = "the payload";
+                                String topic1 = "user/id/1234";
+                                String payload = "1234";
                                 byte[] encodedPayload = new byte[0];
                                 try {
                                     encodedPayload = payload.getBytes("UTF-8");
@@ -402,7 +304,6 @@ public class MainActivity extends AppCompatActivity
                                 String[] topic = {"accident", "remove"};
                                 int[] qos = {0, 0};
                                 try {
-                                    //IMqttToken subToken = client.subscribe(topic, qos);
                                     IMqttToken subToken = client.subscribe(topic, qos);
                                     subToken.setActionCallback(new IMqttActionListener() {
                                         @Override
@@ -454,7 +355,6 @@ public class MainActivity extends AppCompatActivity
         String markerSnippet = "위도:"+String.valueOf(location.getLatitude())
                 + " 경도:"+String.valueOf(location.getLongitude());
 
-        //현재 위치에 마커 생성
         setCurrentLocation(location, markerTitle, markerSnippet );
     }
 
@@ -517,7 +417,6 @@ public class MainActivity extends AppCompatActivity
 
     public String getCurrentAddress(Location location){
 
-        //지오코더... GPS를 주소로 변환
         Geocoder geocoder = new Geocoder(this, Locale.getDefault());
 
         List<Address> addresses;
@@ -566,7 +465,6 @@ public class MainActivity extends AppCompatActivity
         if (location != null) {
             LatLng currentLocation = new LatLng( location.getLatitude(), location.getLongitude());
 
-            //마커를 원하는 이미지로 변경해줘야함
             MarkerOptions markerOptions = new MarkerOptions();
             markerOptions.position(currentLocation);
             markerOptions.title(markerTitle);
@@ -694,7 +592,6 @@ public class MainActivity extends AppCompatActivity
     }
 
 
-    //여기부터는 GPS 활성화를 위한 메소드들
     private void showDialogForLocationServiceSetting() {
 
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
@@ -751,37 +648,6 @@ public class MainActivity extends AppCompatActivity
 
                 break;
         }
-    }
-
-    @Override
-    public void connectionLost(Throwable cause) {
-
-    }
-
-    @Override
-    public void messageArrived(String topic, MqttMessage message) throws Exception {
-        if(topic.equals("accident")) {
-            //Toast.makeText(getApplicationContext(), "message arrived", Toast.LENGTH_SHORT).show();
-            String[] a = message.getPayload().toString().split(",");
-            double[] l = new double[2];
-            l[0] = Double.parseDouble(a[0]);
-            l[1] = Double.parseDouble(a[1]);
-            Toast.makeText(getApplicationContext(), "message arrived:"+l[0]+","+l[1]+".", Toast.LENGTH_SHORT).show();
-
-
-            LatLng newLocation = new LatLng(l[0], l[1]);
-            myI++;
-            MarkerOptions markerOptions = new MarkerOptions();
-            markerOptions.position(newLocation);
-            markerOptions.title("test" + myI);
-            markerOptions.snippet("test1-" + myI);
-            mGoogleMap.addMarker(markerOptions);
-        }
-    }
-
-    @Override
-    public void deliveryComplete(IMqttDeliveryToken token) {
-
     }
 }
 
