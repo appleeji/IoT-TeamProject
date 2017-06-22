@@ -31,13 +31,7 @@ public class MainActivity extends AppCompatActivity  {
     EditText etext;
     String ip;
     private int i = 0;
-    TextView subject;
 
-    static final String TAG = "MobileProgramming";
-
-    public final int MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE = 1;
-
-    //Service에 바인드하기 위한 객체 생성
     private ServiceConnection mConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
@@ -66,7 +60,6 @@ public class MainActivity extends AppCompatActivity  {
 
     }
 
-    //서비스가 실행중인지 검사하는 함수.
     public boolean isServiceRunningCheck() {
         ActivityManager manager = (ActivityManager) this.getSystemService(Activity.ACTIVITY_SERVICE);
         for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
@@ -80,9 +73,7 @@ public class MainActivity extends AppCompatActivity  {
     @Override
     protected void onResume(){
         super.onResume();
-        //SmartHelmetService가 실행 중이라면 실행. SmartHelmetService에 bind
         if(isServiceRunningCheck()) {
-            //서비스가 실행 중일 때 재생 중인 파일의 index와 음악의 재생여부를 settings에서 꺼냄
             SharedPreferences settings = getSharedPreferences("MyPrefs", MODE_PRIVATE);
             ip = settings.getString("ip", "");
 
@@ -95,7 +86,6 @@ public class MainActivity extends AppCompatActivity  {
     @Override
     protected void onPause(){
         super.onPause();
-        //SmartHelmetService가 실행 중일 때 Pause된다면 실행
         if(mBound) {
             SharedPreferences settings = getSharedPreferences("MyPrefs", MODE_PRIVATE);
             SharedPreferences.Editor editor = settings.edit();
@@ -124,7 +114,7 @@ public class MainActivity extends AppCompatActivity  {
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.start:
-                if(mBound == false) {   //재생 버튼을 처음 클릭했을 때 실행. Service 생성과 bind
+                if(mBound == false) {
                     if(etext.length() != 0) {
                         ip = etext.getText().toString();
                         Intent intent = new Intent(this, SmartHelmetService.class);

@@ -27,20 +27,16 @@ import java.io.UnsupportedEncodingException;
 
 
 public class SmartHelmetService extends Service {
-    // audio/video 파일 재생을 제어하는데 사용하는 클래스
     static final String TAG = "MobileProgramming";
     static final String USERID = "userID_1";
     MediaPlayer mediaPlayer;
-    String[] file = new String[2];
     String ip;
-    Intent intent;
     PendingIntent pIntent;
     private String clientId = MqttClient.generateClientId();
     private MqttAndroidClient client=null;
 
     Notification noti;
 
-    //Activity와 bind하기 위한 객체
     public class SmartHelmetBinder extends Binder {
         SmartHelmetService getService() { return SmartHelmetService.this; }
     }
@@ -59,24 +55,14 @@ public class SmartHelmetService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        // intent: startService() 호출 시 넘기는 intent 객체
-        // flags: service start 요청에 대한 부가 정보. 0, START_FLAG_REDELIVERY, START_FLAG_RETRY
-        // startId: start 요청을 나타내는 unique integer id
         Log.d(TAG, "onStartCommand()");
-
 
         if(mediaPlayer != null){
             mediaPlayer.reset();
-        } else //mediaPlayer = new MediaPlayer();
+        } else
             mediaPlayer = MediaPlayer.create(this, R.raw.testmusic1);
 
-        try {
-            //mediaPlayer.setDataSource(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM).toString());
-            mediaPlayer.setLooping(true);
-           // mediaPlayer.prepare();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        mediaPlayer.setLooping(true);
 
         if(client == null) {
             ip = intent.getStringExtra("IP");
@@ -101,11 +87,6 @@ public class SmartHelmetService extends Service {
                             Toast.makeText(getApplicationContext(), "message arrived!!!", Toast.LENGTH_SHORT).show();
 
                             if (topic.equals("user/id/" + USERID+"/test")) {
-                                try {
-                                    //mediaPlayer.prepare();
-                                } catch(Exception e){
-                                    e.printStackTrace();
-                                }
                                 musicStart();
                                 Intent intent;
                                 intent = new Intent(getApplicationContext(), MainActivity.class);
@@ -128,7 +109,6 @@ public class SmartHelmetService extends Service {
 
                         @Override
                         public void onSuccess(IMqttToken asyncActionToken) {
-                            // We are connected
                             Log.d(a, "onSuccess");
                             String topic = "user/id/" + USERID+"/add";
                             String payload = USERID;
@@ -141,14 +121,12 @@ public class SmartHelmetService extends Service {
                                 e.printStackTrace();
                             }
                             topic = "user/id/" + USERID+"/test";
-                            //Toast.makeText(getApplicationContext(), "onSuccess1", Toast.LENGTH_SHORT).show();
                             int qos = 0;
                             try {
                                 IMqttToken subToken = client.subscribe(topic, qos);
                                 subToken.setActionCallback(new IMqttActionListener() {
                                     @Override
                                     public void onSuccess(IMqttToken asyncActionToken) {
-                                        // The message was published
                                         Toast.makeText(getApplicationContext(), "onSuccess2", Toast.LENGTH_SHORT).show();
 
                                     }
@@ -156,8 +134,6 @@ public class SmartHelmetService extends Service {
                                     @Override
                                     public void onFailure(IMqttToken asyncActionToken,
                                                           Throwable exception) {
-                                        // The subscription could not be performed, maybe the user was not
-                                        // authorized to subscribe on the specified topic e.g. using wildcards
                                         Toast.makeText(getApplicationContext(), "onFailure2", Toast.LENGTH_SHORT).show();
 
                                     }
@@ -171,7 +147,6 @@ public class SmartHelmetService extends Service {
 
                         @Override
                         public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
-                            // Something went wrong e.g. connection timeout or firewall problems
                             Log.d(a, "onFailure");
                             Toast.makeText(getApplicationContext(), "onFailure1", Toast.LENGTH_SHORT).show();
                         }
@@ -185,15 +160,9 @@ public class SmartHelmetService extends Service {
 
 
         }
-        // Service를 Foreground로 실행하기 위한 과정
-
-        // 1. Notification 객체 생성
-        // 1-1. Intent 객체 생성 - MainActivity 클래스를 실행하기 위한 Intent 객체
         intent = new Intent(this, MainActivity.class);
-        // 1-2. Intent 객체를 이용하여 PendingIntent 객체를 생성 - Activity를 실행하기 위한 PendingIntent
         pIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
 
-        // 1-3. Notification 객체 생성
         noti = new Notification.Builder(this)
                 .setContentTitle(getText(R.string.app_name))
                 .setContentText(ip)
@@ -201,7 +170,6 @@ public class SmartHelmetService extends Service {
                 .setContentIntent(pIntent)
                 .build();
 
-        // 2. foregound service 설정 - startForeground() 메소드 호출, 위에서 생성한 nofication 객체 넘겨줌
         startForeground(123, noti);
 
         return START_STICKY;
