@@ -156,15 +156,13 @@ while True:
 		accel_yout2 = read_word_2c(0x3d)
 		accel_zout2 = read_word_2c(0x3f)
 
-		accel_xout_scaled2 = accel_xout2 / 16384.0
-		accel_yout_scaled2 = accel_yout2 / 16384.0
-		accel_zout_scaled2 = accel_zout2 / 16384.0
+		accel_xout_scaled2 = accel_xout / 16384.0
+		accel_yout_scaled2 = accel_yout / 16384.0
+		accel_zout_scaled2 = accel_zout / 16384.0
 
-		x_rotation = get_x_rotation(accel_xout_scaled2, accel_yout_scaled2, accel_zout_scaled2)
-		y_rotation = get_y_rotation(accel_xout_scaled2, accel_yout_scaled2, accel_zout_scaled2)
-		if (math.sqrt(pow(accel_xout_prev2 - accel_xout2,2)+pow(accel_yout_prev2 - accel_yout2,2)+pow(accel_zout_prev2 - accel_zout2,2)) < 1000) and (abs(x_rotation) > 60) and (abs(y_rotation) > 60) :
+		if math.sqrt(pow(accel_xout_prev2 - accel_xout2,2)+pow(accel_yout_prev2 - accel_yout2,2)+pow(accel_zout_prev2 - accel_zout2,2)) < 1000 :
 			waitCount += 1
-			print "countDown ", waitCount
+			print waitCount
 		else :
 			skipCount += 1
 			waitCount = 0
@@ -173,7 +171,13 @@ while True:
 			break	
 		#count 10secons
 		if waitCount > 100 :
-			testa = 1	
+			testa = 1
+			#step5 put the value into deeplearning2 to find out accident
+			x_rotation = get_x_rotation(accel_xout_scaled2, accel_yout_scaled2, accel_zout_scaled2)
+			y_rotation = get_y_rotation(accel_xout_scaled2, accel_yout_scaled2, accel_zout_scaled2)
+			if (abs(x_rotation) < 60) and (abs(y_rotation)<60) : 
+				break	
+
 			#step6 get gps value
 			print "step6"
 			countGps = 0
