@@ -28,7 +28,7 @@ io.sockets.on('connection', function (socket) {
 });
 client.on('connect', function() { // When connected
   // subscribe to a topic
-	  client.subscribe('led', function() {
+	  client.subscribe('gyroSensor', function() {
 		// when a message arrives, do something with it
 		client.on('message', function(topic, message, packet) {
 		console.log('dddd');

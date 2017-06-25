@@ -8,6 +8,10 @@
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
 <script src="jquery/iphone-style-checkboxes.js"></script>
 <script src="jquery/iphone-style-checkboxes.js"></script>
+  <script
+    src="https://code.jquery.com/jquery-2.2.4.min.js"
+    integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44="
+    crossorigin="anonymous"></script>
 <link rel="stylesheet" href="style.css">
 
 <style>
@@ -22,6 +26,24 @@
     <div style="width:75%;">
         <canvas id="canvas"></canvas>
     </div>
+	<table>
+        <thead>
+		<tr>
+			<th width="200px">vector</th>
+			<th width="200px">x_rotation</th>
+			<th width="200px">y_rotation</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr>
+			<td width="200px"><a style="text-align:center" id="vector_id"></a></td>
+			<td width="200px"><a style="text-align:center"id="x_rotation_id"></a></td>
+			<td width="200px"><a style="text-align:center"id="y_rotation_id"></a></td>
+		</tr>
+	</tbody>
+	</table>
+
+	
 <script>
         window.chartColors = {
          red: 'rgb(255, 99, 132)',
@@ -39,16 +61,22 @@
             data: {
                 labels: [" "],
                 datasets: [{
-                    label: "temperature",
+                    label: "vector",
                     backgroundColor: window.chartColors.red,
                     borderColor: window.chartColors.red,
                     data: [0],
                     fill: false,
                 }, {
-                    label: "humidity",
+                    label: "x_rotation",
                     fill: false,
                     backgroundColor: window.chartColors.blue,
                     borderColor: window.chartColors.blue,
+                    data: [0],
+                },{
+                    label: "y_rotation",
+                    fill: false,
+                    backgroundColor: window.chartColors.green,
+                    borderColor: window.chartColors.green,
                     data: [0],
                 }]
             },
@@ -90,38 +118,53 @@
         };
 </script>
 <script>
+  
   var socket = io.connect('http://127.0.0.1:5000');
     socket.on('connect', function () {
 	    socket.on('mqtt', function (msg) {
 	    console.log(msg.topic+' '+msg.payload);
-
-	    var strArray = msg.payload.split('-');
-	    var temp = strArray[0];
-	    var humid = strArray[1];
-	    var time = strArray[2];
-	  
+	    
+	    
+	    var strArray = msg.payload.split('*');
+	    
+	    var vector = strArray[0];
+	    var x_rotation = strArray[1];
+	    var y_rotation = strArray[2];
+	    var time = strArray[3]; 
+	    console.log(vector);
+            $('#vector_id').empty();
+            $('#vector_id').append("<a>"+vector+"</a>");
+	    $('#x_rotation_id').empty();
+	    $('#x_rotation_id').append("<a>"+x_rotation+"</a>");
+	    $('#y_rotation_id').empty();
+	    $('#y_rotation_id').append("<a>"+y_rotation+"</a>");
 	    count++;
-	    if(count > 10)
+	    if(count > 20)
 	    {
 	      config.data.labels.shift();
 	      config.data.datasets[0].data.shift();
 	      config.data.datasets[1].data.shift();
-	      count = 11;
+	      config.data.datasets[2].data.shift();
+	      count = 21;
 	    }
 	    config.data.labels.push(time);
-	    config.data.datasets[0].data.push(temp);
-	    config.data.datasets[1].data.push(humid);
+	    config.data.datasets[0].data.push(vector);
+	    config.data.datasets[1].data.push(x_rotation);
+	    config.data.datasets[2].data.push(y_rotation);
    		 window.myLine.update();
   
 	    });
- 	   socket.emit('subscribe',{topic:'led'});
+ 	   socket.emit('subscribe',{topic:'gyroSensor'});
  	   });
 
     window.onload = function() {
             var ctx = document.getElementById("canvas").getContext("2d");
             window.myLine = new Chart(ctx, config);
+	    //console.log($('#vector_id').text());
+	    //console.log(vector);
+	    //$('#vector_id').append(vector);
+	   
     };
-
     </script>
  </body>
 </html>
