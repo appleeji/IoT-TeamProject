@@ -252,50 +252,50 @@ while True:
 					print("\nHypothesis: ", h, "\nCorrect: ", c)
 					if c == 0 : 
 						break	
-					#step7 get gps value
-					print "step7"
-					countGps = 0
-					while True:
-						time.sleep(0.1)
-						str = serialPort.readline()
-						msg = parseGPS(str)
-						if countGps > 10000 :
+				#step7 get gps value
+				print "step7"
+				countGps = 0
+				while True:
+					time.sleep(0.1)
+					str = serialPort.readline()
+					msg = parseGPS(str)
+					if countGps > 10000 :
+						break
+					else :
+						countGps += 1
+					if msg :
+						if msg.lat and msg.lon :
+							#step8 publis gps value 
+							print "step8"
+
+							print msg.lon+'----------'+msg.lat
+							b = float(msg.lat)/100
+							c = float(msg.lon)/100
+							msg.lat = "%f" % (b)
+							msg.lon = "%f" % (c)
+
+							positionLat = msg.lat.find('.')
+							positionLon = msg.lon.find('.')
+		
+							latDegree = int(msg.lat[:positionLat])
+							lonDegree = int(msg.lon[:positionLon])
+							latMinute = float(msg.lat[positionLat:])/60*100
+							lonMinute = float(msg.lon[positionLon:])/60*100
+							
+							latMerge = latDegree + latMinute
+							msg.lat = "%f" % (latMerge)
+							lonMerge = lonDegree + lonMinute
+							msg.lon = "%f" % (lonMerge)
+
+							mqttc.loop_start()
+							sendMsg = 'c'+msg.lon+'uuuu,'+msg.lon+','+msg.lat
+							print sendMsg
+							mqttc.publish("accident",sendMsg)	
+							mqttc.loop_stop()				
 							break
-						else :
-							countGps += 1
-						if msg :
-							if msg.lat and msg.lon :
-								#step8 publis gps value 
-								print "step8"
-
-								print msg.lon+'----------'+msg.lat
-								b = float(msg.lat)/100
-								c = float(msg.lon)/100
-								msg.lat = "%f" % (b)
-								msg.lon = "%f" % (c)
-
-								positionLat = msg.lat.find('.')
-								positionLon = msg.lon.find('.')
-
-								latDegree = int(msg.lat[:positionLat])
-								lonDegree = int(msg.lon[:positionLon])
-								latMinute = float(msg.lat[positionLat:])/60*100
-								lonMinute = float(msg.lon[positionLon:])/60*100
-								
-								latMerge = latDegree + latMinute
-								msg.lat = "%f" % (latMerge)
-								lonMerge = lonDegree + lonMinute
-								msg.lon = "%f" % (lonMerge)
-
-								mqttc.loop_start()
-								sendMsg = 'c'+msg.lon+'uuuu,'+msg.lon+','+msg.lat
-								print sendMsg
-								mqttc.publish("accident",sendMsg)	
-								mqttc.loop_stop()				
-								break
-						else :
-							continue
-				
+					else :
+						continue
+			
 #print "accel_xout: ", accel_xout, " scaled: ", accel_xout_scaled
 #print "accel_yout: ", accel_yout, " scaled: ", accel_yout_scaled
 #print "accel_zout: ", accel_zout, " scaled: ", accel_zout_scaled
