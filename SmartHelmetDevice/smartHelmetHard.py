@@ -1,24 +1,21 @@
-# Lab 9 XOR
-import tensorflow as tf
-import numpy as np
-import time
-
-#!/usr/bin/python
+#gyro&accel
+import RPi.GPIO as gpio
 import smbus
 import math
 
 #mqtt
 import paho.mqtt.client as mqtt
 import random
+import time
 
 #gps
 import serial
 import pynmea2
 
 #------------------------------------------------ gps -----------------------------------------
-def parseGPS(str):
-	if str.find('GGA') > 0:
-		msg = pynmea2.parse(str)
+def parseGPS(mystr):
+	if mystr.find('GGA') > 0:
+		msg = pynmea2.parse(mystr)
 		return msg
 	else :
 		return None
@@ -32,6 +29,50 @@ mqttc = mqtt.Client()
 # YOU NEED TO CHANGE THE IP ADDRESS OR HOST NAME
 mqttc.connect("192.168.43.95")
 #mqttc.connect("localhost")
+
+def on_connect2(client, userdata, rc):
+	print "connected with result code ", rc
+	client.subscribe("test/userID_1")
+
+def on_message2(client, userdata, msg):
+	if msg.topic == "test/userID_1":
+		global isCancel
+		isCancel = 1
+		
+isCancel = 0
+mqtts = mqtt.Client()
+mqtts.on_connect = on_connect2
+mqtts.on_message = on_message2
+
+mqtts.connect("192.168.43.95")
+
+#------------------------------- ultrasonic ---------------------------------------
+trig_pin = 13
+echo_pin = 19
+
+gpio.setmode(gpio.BCM)
+gpio.cleanup()
+
+gpio.setup(trig_pin, gpio.OUT)
+gpio.setup(echo_pin, gpio.IN)
+
+def getDistance():
+	gpio.output(trig_pin, False)
+	time.sleep(0.1)
+	gpio.output(trig_pin, True)
+	time.sleep(0.00001)
+	gpio.output(trig_pin, False)
+	
+	while gpio.input(echo_pin) ==0:
+		pulse_start = time.time()
+
+	while gpio.input(echo_pin) == 1:
+		pulse_end = time.time()
+
+	pulse_duration = pulse_end - pulse_start
+	distance = pulse_duration * 17000
+	distance = round(distance, 2)
+	return distance
 
 #-------------------------------- gyro&accel ----------------------------------------
 # Power management registers
@@ -85,165 +126,194 @@ accel_xout_scaled_prev = 0.
 accel_yout_scaled_prev = 0.
 accel_zout_scaled_prev = 0.
 
-while True:
-	#step1 sleep
-	print "step1"
-	time.sleep(0.3)
+mqtts.loop_start()
 
-	#step2 get gyro&aceel sensor value 
-	print "step2"
-	gyro_xout = read_word_2c(0x43)
-	gyro_yout = read_word_2c(0x45)
-	gyro_zout = read_word_2c(0x47)
+try:
+	while True:
+		#step1 sleep
+		print "step1"
+		#time.sleep(0.3)
+		distance = getDistance()
+		if distance > 15:
+			continue
 
-	print "gyro_xout: ", gyro_xout, " scaled: ", (gyro_xout / 131)
-	print "gyro_yout: ", gyro_yout, " scaled: ", (gyro_yout / 131)
-	print "gyro_zout: ", gyro_zout, " scaled: ", (gyro_zout / 131)
-
-	accel_xout = read_word_2c(0x3b)
-	accel_yout = read_word_2c(0x3d)
-	accel_zout = read_word_2c(0x3f)
-
-	accel_xout_scaled = accel_xout / 16384.0
-	accel_yout_scaled = accel_yout / 16384.0
-	accel_zout_scaled = accel_zout / 16384.0
-
-	#skip first step	
-	if count == 0:
+		#step2 get gyro&aceel sensor value 
+		print "step2"
+		gyro_xout = read_word_2c(0x43)
+		gyro_yout = read_word_2c(0x45)
+		gyro_zout = read_word_2c(0x47)
+	
+		print "gyro_xout: ", gyro_xout, " scaled: ", (gyro_xout / 131)
+		print "gyro_yout: ", gyro_yout, " scaled: ", (gyro_yout / 131)
+		print "gyro_zout: ", gyro_zout, " scaled: ", (gyro_zout / 131)
+	
+		accel_xout = read_word_2c(0x3b)
+		accel_yout = read_word_2c(0x3d)
+		accel_zout = read_word_2c(0x3f)
+	
+		accel_xout_scaled = accel_xout / 16384.0
+		accel_yout_scaled = accel_yout / 16384.0
+		accel_zout_scaled = accel_zout / 16384.0
+	
+		#skip first step	
+		if count == 0:
+			gyro_xout_prev = gyro_xout
+			gyro_yout_prev = gyro_yout
+			gyro_zout_prev = gyro_zout
+	
+			accel_xout_prev = accel_xout
+			accel_yout_prev = accel_yout
+			accel_zout_prev = accel_zout
+	
+			accel_xout_scaled_prev = accel_xout_scaled 
+			accel_yout_scaled_prev = accel_yout_scaled 
+			accel_zout_scaled_prev = accel_zout_scaled
+			count += 1
+			continue
+	
+		#step3 check if value is validate
+		print "step3"
+		if math.sqrt(pow(accel_xout_prev - accel_xout,2)+pow(accel_yout_prev - accel_yout,2)+pow(accel_zout_prev - accel_zout,2)) < 8000 :
+			continue
+	
+		#step4 wait unitle gap between two variables is small enough
+		print "step4"
+		waitCount = 0
+		skipCount = 0
+		gyro_xout_prev2 = 0.
+		gyro_yout_prev2 = 0.
+		gyro_zout_prev2 = 0.
+	
+		accel_xout_prev2 = 0.
+		accel_yout_prev2 = 0.
+		accel_zout_prev2 = 0.
+	
+		accel_xout_scaled_prev2 = 0. 
+		accel_yout_scaled_prev2 = 0.
+		accel_zout_scaled_prev2 = 0.
+		waitCount = 0
+		skipCount = 0
+		while True :
+			print "step44"
+			time.sleep(0.1)
+	
+			gyro_xout2 = read_word_2c(0x43)
+			gyro_yout2 = read_word_2c(0x45)
+			gyro_zout2 = read_word_2c(0x47)
+	
+			accel_xout2 = read_word_2c(0x3b)
+			accel_yout2 = read_word_2c(0x3d)
+			accel_zout2 = read_word_2c(0x3f)
+	
+			accel_xout_scaled2 = accel_xout2 / 16384.0
+			accel_yout_scaled2 = accel_yout2 / 16384.0
+			accel_zout_scaled2 = accel_zout2 / 16384.0
+	
+			vector =  math.sqrt(pow(accel_xout_prev2 - accel_xout2,2)+pow(accel_yout_prev2 - accel_yout2,2)+pow(accel_zout_prev2 - accel_zout2,2))
+			x_rotation = get_x_rotation(accel_xout_scaled2, accel_yout_scaled2, accel_zout_scaled2)
+			y_rotation = get_y_rotation(accel_xout_scaled2, accel_yout_scaled2, accel_zout_scaled2)
+			
+			now = time.localtime()
+			nowDatetime = "%04d-%02d-%02d %02d:%02d:%02d" % (now.tm_year, now.tm_mon, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec)
+			mqttc.loop_start()
+			sendMsg = str(vector/60)+'*'+str(x_rotation)+'*'+str(y_rotation)+'*'+str(nowDatetime)
+	
+			print sendMsg
+			mqttc.publish("gyroSensor",sendMsg)	
+	
+			if (vector < 5000) and (abs(x_rotation) > 60) or (abs(y_rotation) > 60) :
+				waitCount += 1
+				print "waitcountDown ", waitCount
+			else :
+				print "skipcountDown ", skipCount
+				skipCount += 1
+				waitCount = 0
+			#count 30seconds		
+			if skipCount > 300 :
+				break	
+			#count 10secons
+			if waitCount > 100 :
+				testa = 1	
+				#step6 get gps value
+				print "step6"
+				countGps = 0
+				while True:
+					time.sleep(0.1)
+					mystr = serialPort.readline()
+					msg = parseGPS(mystr)
+					if countGps > 100 :
+						break
+					else :
+						countGps += 1
+					if msg :
+						if msg.lat and msg.lon :
+							#step7 publis gps value 
+							print "step7"
+	
+							print msg.lon+'----------'+msg.lat
+							b = float(msg.lat)/100
+							c = float(msg.lon)/100
+							msg.lat = "%f" % (b)
+							msg.lon = "%f" % (c)
+	
+							positionLat = msg.lat.find('.')
+							positionLon = msg.lon.find('.')
+			
+							latDegree = int(msg.lat[:positionLat])
+							lonDegree = int(msg.lon[:positionLon])
+							latMinute = float(msg.lat[positionLat:])/60*100
+							lonMinute = float(msg.lon[positionLon:])/60*100
+								
+							latMerge = latDegree + latMinute
+							msg.lat = "%f" % (latMerge)
+							lonMerge = lonDegree + lonMinute
+							msg.lon = "%f" % (lonMerge)
+	
+							#step8 publis gps value 
+							print "step8"
+							mqttc.loop_start()
+							sendMsg = 'userID_1,'+msg.lon+','+msg.lat
+							print sendMsg
+							mqttc.publish("accident",sendMsg)	
+							mqttc.loop_stop()				
+							while isCancel == 0:
+								print "waiting"
+								time.sleep(1)
+							count = 0
+							isCancel = 0
+							break
+							
+					else :
+						continue
+				break
+				
+			gyro_xout_prev2 = gyro_xout2
+			gyro_yout_prev2 = gyro_yout2
+			gyro_zout_prev2 = gyro_zout2
+		
+			accel_xout_prev2 = accel_xout2
+			accel_yout_prev2 = accel_yout2
+			accel_zout_prev2 = accel_zout2
+	
+			accel_xout_scaled_prev2 = accel_xout_prev2 / 16384.0
+			accel_yout_scaled_prev2 = accel_yout_prev2 / 16384.0
+			accel_zout_scaled_prev2 = accel_zout_prev2 / 16384.0
+	
+	
 		gyro_xout_prev = gyro_xout
 		gyro_yout_prev = gyro_yout
 		gyro_zout_prev = gyro_zout
-
+		
 		accel_xout_prev = accel_xout
 		accel_yout_prev = accel_yout
 		accel_zout_prev = accel_zout
-
-		accel_xout_scaled_prev = accel_xout_scaled 
-		accel_yout_scaled_prev = accel_yout_scaled 
-		accel_zout_scaled_prev = accel_zout_scaled
-		count += 1
-		continue
-
-	#step3 check if value is validate
-	print "step3"
-	if math.sqrt(pow(accel_xout_prev - accel_xout,2)+pow(accel_yout_prev - accel_yout,2)+pow(accel_zout_prev - accel_zout,2)) < 8000 :
-		continue
-
-	#step4 wait unitle gap between two variables is small enough
-	print "step4"
-	waitCount = 0
-	skipCount = 0
-	gyro_xout_prev2 = 0.
-	gyro_yout_prev2 = 0.
-	gyro_zout_prev2 = 0.
-
-	accel_xout_prev2 = 0.
-	accel_yout_prev2 = 0.
-	accel_zout_prev2 = 0.
-
-	accel_xout_scaled_prev2 = 0. 
-	accel_yout_scaled_prev2 = 0.
-	accel_zout_scaled_prev2 = 0.
-
-	while True :
-		time.sleep(0.1)
-
-		gyro_xout2 = read_word_2c(0x43)
-		gyro_yout2 = read_word_2c(0x45)
-		gyro_zout2 = read_word_2c(0x47)
-
-		accel_xout2 = read_word_2c(0x3b)
-		accel_yout2 = read_word_2c(0x3d)
-		accel_zout2 = read_word_2c(0x3f)
-
-		accel_xout_scaled2 = accel_xout2 / 16384.0
-		accel_yout_scaled2 = accel_yout2 / 16384.0
-		accel_zout_scaled2 = accel_zout2 / 16384.0
-
-		x_rotation = get_x_rotation(accel_xout_scaled2, accel_yout_scaled2, accel_zout_scaled2)
-		y_rotation = get_y_rotation(accel_xout_scaled2, accel_yout_scaled2, accel_zout_scaled2)
-		if (math.sqrt(pow(accel_xout_prev2 - accel_xout2,2)+pow(accel_yout_prev2 - accel_yout2,2)+pow(accel_zout_prev2 - accel_zout2,2)) < 1000) and (abs(x_rotation) > 60) and (abs(y_rotation) > 60) :
-			waitCount += 1
-			print "countDown ", waitCount
-		else :
-			skipCount += 1
-			waitCount = 0
-		#count 30seconds		
-		if skipCount > 300 :
-			break	
-		#count 10secons
-		if waitCount > 100 :
-			testa = 1	
-			#step6 get gps value
-			print "step6"
-			countGps = 0
-			while True:
-				time.sleep(0.1)
-				str = serialPort.readline()
-				msg = parseGPS(str)
-				if countGps > 1000 :
-					break
-				else :
-					countGps += 1
-				if msg :
-					if msg.lat and msg.lon :
-						#step7 publis gps value 
-						print "step7"
-
-						print msg.lon+'----------'+msg.lat
-						b = float(msg.lat)/100
-						c = float(msg.lon)/100
-						msg.lat = "%f" % (b)
-						msg.lon = "%f" % (c)
-
-						positionLat = msg.lat.find('.')
-						positionLon = msg.lon.find('.')
-		
-						latDegree = int(msg.lat[:positionLat])
-						lonDegree = int(msg.lon[:positionLon])
-						latMinute = float(msg.lat[positionLat:])/60*100
-						lonMinute = float(msg.lon[positionLon:])/60*100
-							
-						latMerge = latDegree + latMinute
-						msg.lat = "%f" % (latMerge)
-						lonMerge = lonDegree + lonMinute
-						msg.lon = "%f" % (lonMerge)
-
-						#step8 publis gps value 
-						print "step8"
-						mqttc.loop_start()
-						sendMsg = 'c'+msg.lon+'uuuu,'+msg.lon+','+msg.lat
-						print sendMsg
-						mqttc.publish("accident",sendMsg)	
-						mqttc.loop_stop()				
-						break
-				else :
-					continue
-			break
-			
-		gyro_xout_prev2 = gyro_xout2
-		gyro_yout_prev2 = gyro_yout2
-		gyro_zout_prev2 = gyro_zout2
 	
-		accel_xout_prev2 = accel_xout2
-		accel_yout_prev2 = accel_yout2
-		accel_zout_prev2 = accel_zout2
-
-		accel_xout_scaled_prev2 = accel_xout_prev2 / 16384.0
-		accel_yout_scaled_prev2 = accel_yout_prev2 / 16384.0
-		accel_zout_scaled_prev2 = accel_zout_prev2 / 16384.0
-
-
-	gyro_xout_prev = gyro_xout
-	gyro_yout_prev = gyro_yout
-	gyro_zout_prev = gyro_zout
+		accel_xout_scaled_prev = accel_xout_prev / 16384.0
+		accel_yout_scaled_prev = accel_yout_prev / 16384.0
+		accel_zout_scaled_prev = accel_zout_prev / 16384.0
 	
-	accel_xout_prev = accel_xout
-	accel_yout_prev = accel_yout
-	accel_zout_prev = accel_zout
-
-	accel_xout_scaled_prev = accel_xout_prev / 16384.0
-	accel_yout_scaled_prev = accel_yout_prev / 16384.0
-	accel_zout_scaled_prev = accel_zout_prev / 16384.0
-
-
+except KeyboardInterrupt as e:
+	gpio.cleanup()
+	mqtts.loob_stop
+	mqtts.unsubscribe("test/userID_1")
+	mqtts.disconnect()
